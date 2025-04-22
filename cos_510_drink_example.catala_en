@@ -1,35 +1,48 @@
-```catala
+# PL Beverage Tax Section 510
+# 1) Every COS 510 student is subject to a class drink tax of 5 liter of carbonated beverages per semester. 
+# 2) Limitations
+#	A) In the case that a COS 510 student is over the age of 21 paragraph 1) shall be applied by substituting “1 liters” for “5 liters” if —
+#		a) the student supplies 1 liter of milk
+#	B) paragraph 1) does not apply to students below the age of 21 with perfect attendance.
+
+```catala-metadata
 declaration scope Student:
     input age content integer
-    input attendences content integer
+    input attendances content integer
 
     output is_over_21 condition
-    output perfect_attendence condition
-
-scope Student:
-    rule is_over_21 under condition age >= 21 consequence fulfilled
-    rule perfect_attendence under condition attendences = 23 consequence fulfilled
+    output perfect_attendance condition
 
 declaration enumeration BeverageType:
     -- Soda
-    -- Water
     -- Milk
-    -- Juice
+    -- None
 
 declaration structure BeverageTax:
     data beverage content BeverageType
     data liters content decimal
 
 declaration scope BeverageTaxComputation:
-    input student scope Student
+    student scope Student
+    input age content integer
+    input attendances content integer
     context output tax content BeverageTax
+```
+
+```catala
+scope Student:
+    rule is_over_21 under condition age >= 21 consequence fulfilled
+    rule perfect_attendance under condition attendances = 23 consequence fulfilled
+
 
 scope BeverageTaxComputation:
     label article_1
     definition tax equals BeverageTax {
         -- beverage: Soda
-        -- liters: 5
+        -- liters: 5.0
     }
+    definition student.age equals age
+    definition student.attendances equals attendances
 
 scope BeverageTaxComputation:
     exception article_1
@@ -37,27 +50,32 @@ scope BeverageTaxComputation:
         student.is_over_21 
     consequence equals BeverageTax {
         -- beverage: Milk
-        -- liters: 1
+        -- liters: 1.0
     }
 
 scope BeverageTaxComputation:
     exception article_1
     definition tax under condition 
-        student.perfect_attendence and not student.is_over_21
+        student.perfect_attendance and not student.is_over_21
     consequence equals BeverageTax {
-        -- beverage: Milk
-        -- liters: 1
+        -- beverage: None
+        -- liters: 0.0
     }
+```
 
-declaration scope Test1:
+### Test Cases
+```catala-metadata
+declaration scope Test:
     tax_computation scope BeverageTaxComputation
     output final_tax content BeverageTax
+```
 
-scope Test1:
-    definition tax_computation.student equals 22
-    definition tax_computation.student.attendences equals 23
+```catala
+scope Test:
+    definition tax_computation.age equals 20
+    definition tax_computation.attendances equals 23
 
     definition final_tax equals tax_computation.tax
-    # assertion final_tax.beverage equals Milk
-    # assertion final_tax.liters equals 1
+    assertion final_tax.beverage = None
+    assertion final_tax.liters = 0.0
 ```
