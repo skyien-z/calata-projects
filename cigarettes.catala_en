@@ -1,0 +1,247 @@
+## Definitions
+```catala
+declaration structure Definitions:
+  data complimentary_rental content ComplimentaryRental
+  data rental_day content duration
+  data lease_agreement content LeaseAgreement
+  data rental_agreement content RentalAgreement
+  data rental_company content RenterRenteeType
+  data rental_motor_vehicle content RentalMotorVehicleType
+```
+
+"Complimentary rental" means a rental for which the renter or any person on his or her behalf pays no consideration or any charge or does not reimburse any expenses of the rental company, such as, but not limited to, insurance coverage associated with the rental.
+```catala
+declaration structure ComplimentaryRental:
+  data rental_cost content money
+  data insurance_cost content money
+
+declaration scope IsRentalComplimentary:
+  input rental content ComplimentaryRental
+  output is_rental_complimentary content boolean
+
+scope ComplimentaryRental:
+  definition is_rental_complimentary equals
+  (rental_cost = $0) and (insurance_cost = $0)
+```
+
+"Lease agreement" means any agreement for a stated term of more than 28 days that requires the party leasing from a rental company, as defined in this section, to pay for State motor vehicle registration, to maintain the vehicle for ordinary wear and tear at his or her own expense, and to purchase liability and casualty insurance for the vehicle.
+```catala
+declaration structure LeaseAgreement:
+  data term_days content integer
+  data mvc_registration content boolean
+  data own_vehicle_maintainence content boolean
+  data liability_casualty_insurance_purchase content boolean
+
+declaration scope IsLeaseAgreementValid:
+  input lease content LeaseAgreement
+  output lease_validity content boolean
+
+scope IsLeaseAgreementValid:
+  definition lease_validity equals 
+  (lease.term_days > 28) and
+  (lease.mvc_registration = true) and 
+  (lease.own_vehicle_maintainence = true) and
+  (lease.liability_casualty_insurance_purchase = true)
+```
+
+"Rental agreement" means any agreement or invoice for the rental of a motor vehicle.
+```catala
+declaration structure RentalAgreement:
+  data is_agreement content boolean
+  data is_invoice content boolean
+
+declaration scope RentalAgreement:
+  input document content RentalAgreement
+  output is_rental_agreement_valid content boolean
+
+scope RentalAgreement:
+  definition is_rental_agreement_valid equals
+  (document.is_agreement) or (document.is_invoice)
+```
+
+"Rental company" means any individual, business, or other entity or person engaged in the business of renting motor vehicles, whether or not that is the sole business of the company.
+"Renter" means an individual, business, or any other entity that enters into a rental agreement to rent a motor vehicle from a rental company.
+"Third party" means, other than the renter, an individual, business or any other entity, including a manufacturer, who pays for the rental or reimburses the rental company for the fee.
+```catala
+declaration enumeration RenterRenteeType:
+  -- Individual
+  -- Business
+  -- OtherEntity
+  -- Person
+  -- ThirdParty
+```
+
+"Rental motor vehicle" means a passenger automobile, truck or semitrailer that is rented without a driver and designed for use in the transportation of persons or property on the public roadways, other than for transportation of commercial freight. Such vehicles include, but are not limited to:
+1. Buses (not used for commuting/ridesharing purposes);
+2. Dump trucks and truck cranes (if these vehicles have to be registered/license-plated under State motor vehicle laws in order to be operated and driven on the open highway);
+3. Hearses;
+4. Ice cream trucks (where the product is sold directly off the truck to the ultimate consumer);
+5. Limousines;
+6. Loaner vehicles from a car dealership, whether a cost is paid by the renter or dealership (except where the rental is strictly complimentary, that is, where a vehicle is lent from a car dealership at no cost, whatsoever);
+7. Recreational vehicles, whether self-powered, trailered or towed;
+8. Semitrailers, including utility trailers and every vehicle with or without motive power, other than a pole trailer, designed for carrying persons or property and for being drawn by a motor vehicle and so constructed that some part of its weight and that of its load rests upon or is carried by another vehicle. This also includes the rental of a trailer used for storage if it is designed for carrying persons or property, drawn by a motor vehicle and so constructed that some part of its weight and that of its load rests upon or is carried by another vehicle;
+9. Trucks, including those used for the transportation of non-business property, but not those rented for the transportation of commercial freight, whether the renter is transporting its own goods or the goods of a third party; and
+10. Vans (except those rented for organized commuter vanpools of seven to 15 passengers, one of whom is the driver).
+```catala
+declaration enumeration RentalMotorVehicleType:
+  -- Bus
+  -- DumpTruck
+  -- Hearse
+  -- IceCreamTruck
+  -- Limousine
+  -- LoanerVehicle
+  -- RecreationalVehicle
+  -- Semitrailer
+  -- Truck
+  -- Van
+  -- Other
+```
+
+"Rental day" means midnight to midnight or a 24-hour period commencing at the time of day fixed by the parties for the start of the rental period should the rental agreement specifically provide for it. A rental agreement which is for only a part of a day shall be treated as a whole day.
+```catala
+declaration scope NumberOfRentalDays:
+  input rental_start content date
+  input rental_end content date
+  output number_rental_days content integer
+
+scope NumberOfRentalDays:
+  definition number_rental_days equals
+  (rental_end - rental_start)
+```
+
+## General application; rental time periods
+(a) On rental agreements entered into on and after July 8, 2006, the $ 5.00 per day rental fee applies to the first 28 days of a rental agreement for a rental motor vehicle with the same renter; thus, the maximum rental fee in the aggregate is $ 140.00 even if the actual rental extends beyond 28 days. 
+The rental fee does not apply to any period of a lease agreement.
+
+```catala
+declaration scope GeneralRentalFeeApplication:
+  input agreement_entered_date content date
+  input rental_days content integer
+  input is_complimentary_rental content boolean
+  internal calculated_fee content money
+  output rental_fee content money
+
+scope GeneralRentalFeeApplication:
+  definition calculated_fee equals
+    if rental_days > 28 then $140 else $5 * rental_days
+
+scope GeneralRentalFeeApplication:
+  label general_application
+  definition rental_fee equals
+    if agreement_entered_date >= |2006-07-08| then calculated_fee else $0
+```
+
+## Rentals to government and tax exempt entities not exempt
+Payment of the rental fee is required for rentals to Federal, State, county, municipal or other governmental entities, or non-governmental organizations that are tax exempt under any Federal or State laws.
+```catala
+declaration enumeration FeeRequiredOf:
+  -- TaxExemptOrganizations content RenterRenteeType
+```
+
+## Complimentary rentals
+No rental fee is due and owing for any complimentary rentals. Such an agreement does not require the customer to pay a charge directly related to the use of the vehicle. A complimentary rental is done strictly as a courtesy to the customer. Discounted rentals, however, are not complimentary.
+```catala
+scope GeneralRentalFeeApplication:
+label complimentary_exception exception general_application
+  definition rental_fee equals 
+    if is_complimentary_rental then $0 else calculated_fee
+```
+
+## Motor vehicle dealer situations
+Motor vehicles loaned by a motor vehicle dealer to customers under a warranty, service or similar agreement or contract, for any kind of consideration, whether or not through a third party, and regardless of which party pays the consideration, are considered motor vehicles for rental and, as such, are subject to the fee imposed by the Domestic Security Fee law.
+```catala
+declaration enumeration FeeRequiredOf2:
+  -- TaxExemptOrganizations content RenterRenteeType
+  -- LoanedMotorVehicles content RentalMotorVehicleType
+```
+
+## Transportation of commercial freight; organized commuter vanpools
+(a) Commercial freight rentals are not subject to the Domestic Security fee.
+```catala
+declaration enumeration FeeExemptions:
+  -- CommercialFreightRentals content RentalMotorVehicleType
+```
+(b) Vanpool rentals are not subject to the Domestic Security fee.
+1. A vanpool rental is not a rental of a motor vehicle for the purposes of the Domestic Security Fee law if:
+i. It is part of a voluntary commuter ride-sharing arrangement;
+ii. It involves the use of a van, for a term of any duration, with a seating capacity of between seven and 15 adults, including the driver;
+iii. It involves serving a group of members, one of whom is the driver, that are definite at any point in time;
+iv. It is solely for the purpose of single daily round trips for transportation of members of that group between:
+(1) Places of employment of members of the group (or other group-designated drop-off or pick-up locations); and
+(2) The group-members' residences (or other group-designated drop-off or pick-up locations);
+v. It does not involve compensating the driver or drivers of the van beyond reimbursement for his or her share of the fee for the vanpool arrangement.
+```catala
+declaration structure VanpoolRental:
+  data voluntary_commuter_rideshare content boolean
+  data van_capacity content integer
+  data used_for_work_home_trips content boolean
+  data driver_not_paid_as_employee content boolean
+
+declaration scope VanpoolRentalExemption:
+  input vanpool content VanpoolRental
+  output has_vanpool_exemption content boolean
+
+scope VanpoolRentalExemption:
+  definition has_vanpool_exemption equals 
+  (vanpool.voluntary_commuter_rideshare) and 
+  ((vanpool.van_capacity >= 7) and (vanpool.van_capacity <= 15)) and
+  (vanpool.used_for_work_home_trips) and
+  (vanpool.driver_not_paid_as_employee)
+
+declaration enumeration FeeExemptions2:
+  -- CommercialFreightRentals content RentalMotorVehicleType
+  -- VanpoolRentals content VanpoolRental
+```
+
+## Inter-company rentals
+The company from which the motor vehicle is rented owes a Domestic Security fee for the term of that rental agreement. Any subsequent rental of the same motor vehicle by the renter to another renter imposes an obligation on the first renter to pay the rental fee for the subsequent transaction as well.
+```catala
+  declaration structure CompanyWhichOwesFee:
+    data original_renter content RenterRenteeType
+    data next_renter content RenterRenteeType
+
+# TODO? I'm actually not sure what to do here...
+```
+
+## Out-of-State rental
+The Domestic Security fee applies to rentals made from business locations in New Jersey, whether or not the renter removes the vehicle from and returns it to New Jersey. It does not apply to a rental transaction where a vehicle is rented from outside New Jersey and returned by the renter to a rental company location in New Jersey.
+```catala
+declaration enumeration FeeExemptions3:
+  -- CommercialFreightRentals
+  -- VanpoolRentals content VanpoolRental
+  -- RentalsMadeOutsideOfJersey
+
+declaration enumeration FeeRequiredOf3:
+  -- TaxExemptOrganizations content RenterRenteeType
+  -- LoanedMotorVehicles content RentalMotorVehicleType
+  -- RentalsMadeInJersey
+```
+
+## Quarterly reporting and method of payment
+(a) All fees due from a motor vehicle rental company shall be paid on a quarterly basis and are due no later than the last day of the month following the end of the quarter. The fees shall be reported on return form DSF-100 which shall be filed using an internet based application on the Division of Taxation website www.state.nj.us/treasury/taxation.
+```catala
+
+```
+
+## Separate from sales or use tax
+(a) The Domestic Security fee is separate from and in addition to any sales or use tax imposed on the cost of the rental transaction and is not to be included in the receipts subject to sales tax liability imposed pursuant to the "Sales and Use Tax Act," P.L. 1966, c.30 (N.J.S.A. 54:32B-1 et seq.).
+(b) The Domestic Security fee due from the rental company shall be stated separate and apart from any other rental costs, including any amounts due for sales tax, under the terms of the rental agreement and shall be designated as the "Domestic Security Fee" in the agreement made with or any invoice given to the renter.
+```catala
+declaration enumeration TypesOfTaxes:
+  -- SalesTax
+  -- DomesticSecurityFee
+
+# TODO: Also not sure what to do here?
+```
+
+## Refunds
+Any refunds for over or incorrect payment of the Domestic Security fee may be applied for by completing and filing an A-3730 form with the Division of Taxation. All refunds, however, must be filed no later than four years from the end of the quarter of the year for which payment was due for the refund being sought.
+```catala
+declaration scope FilingRefunds:
+  input date_filed content date
+  input filled_a3730 content boolean
+
+  output refund_valid content boolean
+
+scope FilingRefunds:
+```
